@@ -1,0 +1,3354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学习规划助手</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f1f5f9;
+      --sidebar-bg: #1e293b;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      z-index: 10;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-header .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-header .logo .icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .sidebar-nav .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      position: relative;
+    }
+
+    .sidebar-nav .nav-item:hover {
+      background: rgba(255,255,255,0.06);
+      color: #e2e8f0;
+    }
+
+    .sidebar-nav .nav-item.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+    }
+
+    .sidebar-nav .nav-item .nav-icon {
+      font-size: 18px;
+      width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      color: #64748b;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* ========== MAIN ========== */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    .page {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .page.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .page-header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* ========== SCHEDULE PAGE ========== */
+    .schedule-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .schedule-toolbar .week-label {
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--primary);
+      min-width: 140px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-outline {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { background: var(--bg); border-color: #cbd5e1; }
+
+    .btn-danger {
+      background: #fef2f2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+    .btn-danger:hover { background: #fee2e2; }
+
+    .btn-success {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+    .btn-success:hover { background: #d1fae5; }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    /* Schedule Table */
+    .schedule-table-wrapper {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      overflow: auto;
+      max-height: calc(100vh - 200px);
+    }
+
+    .schedule-table {
+      width: 100%;
+      min-width: 780px;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .schedule-table thead th {
+      background: #f8fafc;
+      padding: 14px 8px;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      text-align: center;
+    }
+
+    .schedule-table thead th .day-date {
+      display: block;
+      font-weight: 400;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .schedule-table tbody td {
+      padding: 0;
+      border: 1px solid var(--border);
+      vertical-align: top;
+      height: 60px;
+      cursor: text;
+      transition: background 0.15s;
+    }
+
+    .schedule-table tbody td:hover {
+      background: #fafbff;
+    }
+
+    .schedule-table th.label-header {
+      width: 72px;
+      min-width: 72px;
+    }
+
+    .schedule-table td.row-label {
+      background: #f8fafc;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+      cursor: default;
+      min-width: 72px;
+      padding: 8px 4px;
+    }
+
+    .schedule-table td.row-label:hover {
+      background: #f8fafc;
+    }
+
+    .schedule-table .cell-content {
+      min-height: 60px;
+      padding: 8px 10px;
+      font-size: 13px;
+      outline: none;
+      word-break: break-word;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .schedule-table .cell-content:empty::before {
+      content: attr(data-placeholder);
+      color: #cbd5e1;
+    }
+
+    .schedule-table .cell-content:focus {
+      background: #eef2ff;
+      box-shadow: inset 0 0 0 2px var(--primary);
+      border-radius: 0;
+    }
+
+    .schedule-table tr.row-hover td {
+      background: #fafbfc;
+    }
+
+    .schedule-table .row-actions {
+      display: none;
+      position: absolute;
+      right: -30px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .schedule-table tbody tr {
+      position: relative;
+    }
+
+    .schedule-table tbody td:last-child {
+      position: relative;
+    }
+
+    .schedule-table .row-delete-btn {
+      position: absolute;
+      right: -28px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #94a3b8;
+      font-size: 12px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      z-index: 1;
+    }
+
+    .schedule-table tbody tr:hover .row-delete-btn {
+      display: flex;
+    }
+
+    .schedule-table .row-delete-btn:hover {
+      background: #fef2f2;
+      color: var(--danger);
+      border-color: #fecaca;
+    }
+
+    /* Import dialog */
+    .import-dialog {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .import-dialog.show { display: flex; }
+
+    .import-dialog .dialog-content {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      width: 480px;
+      max-width: 92vw;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+
+    .import-dialog h3 { margin-bottom: 8px; font-size: 18px; }
+
+    .import-dialog .import-hint {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .import-dialog .import-hint code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .import-dialog .import-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 16px;
+    }
+
+    .import-dialog .import-zone:hover {
+      border-color: var(--primary);
+      background: #f8faff;
+    }
+
+    .import-dialog .import-zone .import-icon {
+      font-size: 44px;
+      margin-bottom: 10px;
+    }
+
+    .import-dialog .dialog-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* File input (hidden) */
+    .hidden-input {
+      display: none;
+    }
+
+    /* ========== TODO PAGE ========== */
+    .todo-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .todo-container { grid-template-columns: 1fr; }
+    }
+
+    .todo-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .todo-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .todo-card h3 .count {
+      background: var(--bg);
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    /* ========== TODO DATE FILTER ========== */
+    .todo-date-filter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 20px;
+      margin-bottom: 16px;
+    }
+
+    .todo-date-filter label {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .todo-date-filter input[type="date"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      cursor: pointer;
+      width: 150px;
+    }
+
+    .todo-date-filter input[type="date"]:focus {
+      border-color: var(--primary);
+    }
+
+    .todo-date-filter .filter-info {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-left: auto;
+    }
+
+    .todo-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .todo-input-row input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .todo-input-row input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+
+    .todo-input-row input[type="date"] {
+      width: 130px;
+      padding: 10px 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+
+    .todo-input-row input[type="date"]:focus {
+      border-color: var(--primary);
+    }
+
+    .todo-input-row select {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+    }
+
+    .todo-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .todo-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      transition: var(--transition);
+    }
+
+    .todo-list li:hover { background: #f1f5f9; }
+
+    .todo-list li.completed {
+      opacity: 0.5;
+    }
+
+    .todo-list li.completed .todo-text {
+      text-decoration: line-through;
+    }
+
+    .todo-list li .todo-check {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #cbd5e1;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+
+    .todo-list li.completed .todo-check {
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .todo-list li.completed .todo-check::after {
+      content: '✓';
+      color: #fff;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .todo-list li .todo-text { flex: 1; font-size: 14px; }
+
+    .todo-list li .todo-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .todo-tag.study { background: #dbeafe; color: #1e40af; }
+    .todo-tag.exam { background: #fce7f3; color: #9d174d; }
+    .todo-tag.other { background: #f1f5f9; color: #475569; }
+
+    .todo-list li .todo-source {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #fef3c7;
+      color: #92400e;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .todo-list li .todo-delete {
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 16px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: var(--transition);
+      border: none;
+      background: none;
+    }
+
+    .todo-list li .todo-delete:hover {
+      color: var(--danger);
+      background: #fef2f2;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+    }
+
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* ========== POMODORO PAGE ========== */
+    .pomodoro-container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .pomodoro-main {
+      flex: 1;
+      min-width: 320px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 40px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .timer-mode-switch {
+      display: flex;
+      gap: 4px;
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 30px;
+    }
+
+    .timer-mode-switch button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .timer-mode-switch button.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .timer-circle {
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .timer-circle svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .timer-circle svg circle {
+      fill: none;
+      stroke-width: 8;
+    }
+
+    .timer-circle svg .bg-circle {
+      stroke: #e2e8f0;
+    }
+
+    .timer-circle svg .progress-circle {
+      stroke: var(--primary);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    .timer-circle.break-mode svg .progress-circle {
+      stroke: var(--success);
+    }
+
+    .timer-display {
+      font-size: 64px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -2px;
+      z-index: 1;
+    }
+
+    .timer-status {
+      font-size: 14px;
+      color: var(--text-secondary);
+      z-index: 1;
+      margin-top: 4px;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-play {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+    }
+
+    .btn-play:hover { background: var(--primary-dark); transform: scale(1.05); }
+
+    .btn-play.paused { background: var(--warning); box-shadow: 0 4px 14px rgba(245,158,11,0.4); }
+    .btn-play.paused:hover { background: #d97706; }
+
+    .btn-reset {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-reset:hover { background: #f1f5f9; }
+
+    .pomodoro-settings {
+      width: 260px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .pomodoro-settings h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .pomodoro-settings .setting-group {
+      margin-bottom: 16px;
+    }
+
+    .pomodoro-settings .setting-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .pomodoro-settings .setting-group .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pomodoro-settings .setting-group input {
+      width: 70px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      outline: none;
+    }
+
+    .pomodoro-settings .setting-group input:focus {
+      border-color: var(--primary);
+    }
+
+    .pomodoro-stats {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .pomodoro-stats .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 13px;
+    }
+
+    .pomodoro-stats .stat-value {
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Countdown Card */
+    .countdown-card {
+      width: 260px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .countdown-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .countdown-display {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .countdown-display .countdown-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .countdown-display .countdown-number {
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown-display .countdown-unit {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .countdown-display .countdown-target-date {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 8px;
+    }
+
+    .countdown-display.past .countdown-number {
+      color: var(--danger);
+    }
+
+    .countdown-display.today .countdown-number {
+      color: var(--warning);
+      font-size: 36px;
+    }
+
+    .countdown-edit {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .countdown-edit input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .countdown-edit input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+
+    .countdown-edit input[type="date"] {
+      cursor: pointer;
+    }
+
+    .countdown-edit-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .countdown-edit-row .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    /* Clock Card */
+    .clock-card {
+      width: 260px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .clock-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .clock-display {
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    .clock-time {
+      font-size: 52px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px;
+    }
+
+    .clock-seconds {
+      font-size: 32px;
+      font-weight: 300;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+      margin-left: 2px;
+    }
+
+    .clock-date {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .clock-weekday {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* ========== REVIEW REMINDER ========== */
+    .review-section {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+
+    .review-section .review-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .review-section .review-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .review-section .review-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .review-section .review-stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .review-section .review-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .review-section .review-stat strong {
+      font-size: 18px;
+      color: var(--text);
+    }
+
+    .review-section .review-stat.due strong {
+      color: var(--danger);
+    }
+
+    .review-section .review-stat.reviewed strong {
+      color: #059669;
+    }
+
+    .review-section .review-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Toggle switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle-switch input { display: none; }
+
+    .toggle-switch .toggle-track {
+      width: 44px;
+      height: 24px;
+      border-radius: 12px;
+      background: #cbd5e1;
+      position: relative;
+      transition: background 0.25s;
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+      background: #10b981;
+    }
+
+    .toggle-switch .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.25s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .toggle-switch input:checked + .toggle-track::after {
+      transform: translateX(20px);
+    }
+
+    .interval-select {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .interval-select:focus {
+      border-color: var(--primary);
+    }
+
+    .review-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      line-height: 1;
+    }
+
+    .review-note {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-left: 6px;
+      background: #fef2f2;
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    /* Review list in browse card */
+    .review-file-list li {
+      cursor: default;
+    }
+
+    .review-file-list .btn-done-review {
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid #a7f3d0;
+      background: #ecfdf5;
+      color: #059669;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+
+    .review-file-list .btn-done-review:hover {
+      background: #d1fae5;
+    }
+
+    /* ========== WRONG QUESTIONS PAGE ========== */
+    .wrong-questions-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .wrong-questions-container { grid-template-columns: 1fr; }
+    }
+
+    .upload-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .upload-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      transition: var(--transition);
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--primary);
+      background: #f8faff;
+    }
+
+    .upload-zone .upload-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .upload-zone p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin: 4px 0;
+    }
+
+    .upload-zone .hint {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .file-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .file-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .file-list li .file-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .file-list li .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-list li .file-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-list li .file-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .file-list li .file-delete {
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 16px;
+      border: none;
+      background: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: var(--transition);
+    }
+
+    .file-list li .file-delete:hover {
+      color: var(--danger);
+      background: #fef2f2;
+    }
+
+    .subject-filter {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .subject-filter .filter-tag {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #fff;
+      transition: var(--transition);
+    }
+
+    .subject-filter .filter-tag.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .subject-filter .filter-tag:hover { border-color: var(--primary); }
+
+    .category-mgmt-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .file-list li .file-notes-indicator {
+      font-size: 10px;
+      color: var(--primary);
+      margin-left: 4px;
+    }
+
+    .file-list li .file-clickable {
+      cursor: pointer;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-list li .file-clickable:hover .file-name {
+      color: var(--primary);
+    }
+
+    /* Wrong question detail dialog */
+    .wrong-detail-dialog {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wrong-detail-dialog.show { display: flex; }
+
+    .wrong-detail-dialog .dialog-content {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      width: 520px;
+      max-width: 92vw;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+
+    .wrong-detail-dialog h3 { margin-bottom: 20px; font-size: 18px; }
+
+    .detail-file-preview {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .detail-file-preview .file-icon { font-size: 24px; }
+
+    .detail-file-preview .file-info { flex: 1; min-width: 0; }
+
+    .detail-file-preview .file-info .file-name {
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wrong-detail-dialog .form-group {
+      margin-bottom: 14px;
+    }
+
+    .wrong-detail-dialog .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .wrong-detail-dialog .form-group select,
+    .wrong-detail-dialog .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      transition: var(--transition);
+      resize: vertical;
+    }
+
+    .wrong-detail-dialog .form-group textarea {
+      min-height: 80px;
+    }
+
+    .wrong-detail-dialog .form-group input:focus,
+    .wrong-detail-dialog .form-group select:focus,
+    .wrong-detail-dialog .form-group textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+
+    .wrong-detail-dialog .dialog-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    /* Category management dialog */
+    .cat-dialog {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cat-dialog.show { display: flex; }
+
+    .cat-dialog .dialog-content {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      width: 400px;
+      max-width: 90vw;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+
+    .cat-dialog h3 { margin-bottom: 16px; font-size: 18px; }
+
+    .cat-dialog .cat-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .cat-dialog .cat-input-row input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .cat-dialog .cat-input-row input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+
+    .cat-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .cat-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .cat-list li .cat-delete {
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 14px;
+      border: none;
+      background: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: var(--transition);
+    }
+
+    .cat-list li .cat-delete:hover { color: var(--danger); background: #fef2f2; }
+
+    .cat-dialog .dialog-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    /* ========== SETTINGS PAGE ========== */
+    .settings-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .settings-container { grid-template-columns: 1fr; }
+    }
+
+    .settings-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .settings-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .settings-data-summary {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    .settings-data-summary strong {
+      color: var(--primary);
+    }
+
+    .import-data-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 8px;
+    }
+
+    .import-data-zone:hover {
+      border-color: var(--primary);
+      background: #f8faff;
+    }
+
+    .import-data-zone .import-icon {
+      font-size: 44px;
+      margin-bottom: 10px;
+    }
+
+    .import-result {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .import-result.success {
+      display: block;
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+
+    .import-result.error {
+      display: block;
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 0;
+      }
+      .sidebar-header { display: none; }
+      .sidebar-nav {
+        flex-direction: row;
+        padding: 8px;
+        gap: 4px;
+      }
+      .sidebar-nav .nav-item {
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+      .sidebar-footer { display: none; }
+      .main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="icon">📚</span>
+        <span>学习规划</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="schedule">
+        <span class="nav-icon">📅</span>
+        <span>日程表</span>
+      </button>
+      <button class="nav-item" data-page="todo">
+        <span class="nav-icon">✅</span>
+        <span>待办事项</span>
+      </button>
+      <button class="nav-item" data-page="pomodoro">
+        <span class="nav-icon">🍅</span>
+        <span>番茄钟</span>
+      </button>
+      <button class="nav-item" data-page="wrong">
+        <span class="nav-icon">❌</span>
+        <span>错题本</span>
+        <span class="review-badge" id="reviewBadge" style="display:none;">0</span>
+      </button>
+      <button class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙</span>
+        <span>设置</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="currentDate"></span>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <main class="main">
+
+    <!-- ========== 日程表 ========== -->
+    <div class="page active" id="page-schedule">
+      <div class="page-header">
+        <h2>📅 周日程表</h2>
+        <p>像 Excel 一样自由编辑，支持导入 Excel 文件自动填入</p>
+      </div>
+      <div class="schedule-toolbar">
+        <button class="btn btn-outline btn-sm" onclick="prevWeek()">◀ 上一周</button>
+        <span class="week-label" id="weekLabel"></span>
+        <button class="btn btn-outline btn-sm" onclick="nextWeek()">下一周 ▶</button>
+        <button class="btn btn-outline btn-sm" onclick="goToToday()">📌 回到本周</button>
+        <button class="btn btn-outline btn-sm" onclick="addScheduleRow()">＋ 添加行</button>
+        <button class="btn btn-success btn-sm" onclick="showImportDialog()">📥 导入 Excel</button>
+        <button class="btn btn-danger btn-sm" onclick="clearCurrentWeek()">🗑 清空本周</button>
+      </div>
+      <div class="schedule-table-wrapper" id="scheduleTableWrapper">
+        <table class="schedule-table" id="scheduleTable">
+          <thead id="scheduleHead"></thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== 待办事项 ========== -->
+    <div class="page" id="page-todo">
+      <div class="page-header">
+        <h2>✅ 每日待办事项</h2>
+        <p>管理你的学习任务，完成一项勾一项</p>
+      </div>
+      <div class="todo-date-filter">
+        <label>📅 筛选日期</label>
+        <input type="date" id="todoFilterDate" onchange="onFilterDateChange()">
+        <button class="btn btn-outline btn-sm" onclick="setTodoFilterToday()">📌 今天</button>
+        <button class="btn btn-outline btn-sm" onclick="setTodoFilterAll()" id="showAllBtn">📋 全部</button>
+      </div>
+      <div class="todo-container">
+        <div class="todo-card">
+          <h3>📋 待完成 <span class="count" id="pendingCount">0</span></h3>
+          <div class="todo-input-row">
+            <input type="text" id="todoInput" placeholder="输入新的待办事项..." onkeydown="if(event.key==='Enter')addTodo()">
+            <input type="date" id="todoDate" title="选择日期">
+            <select id="todoTag">
+              <option value="study">学习</option>
+              <option value="exam">考试</option>
+              <option value="other">其他</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="addTodo()">添加</button>
+          </div>
+          <ul class="todo-list" id="pendingList"></ul>
+          <div class="empty-state" id="pendingEmpty">
+            <div class="empty-icon">🎉</div>
+            <p>暂无待办事项，添加一个吧！</p>
+          </div>
+        </div>
+        <div class="todo-card">
+          <h3>✔ 已完成 <span class="count" id="doneCount">0</span></h3>
+          <ul class="todo-list" id="doneList"></ul>
+          <div class="empty-state" id="doneEmpty">
+            <div class="empty-icon">📝</div>
+            <p>还没有完成的任务</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 番茄钟 ========== -->
+    <div class="page" id="page-pomodoro">
+      <div class="page-header">
+        <h2>🍅 番茄钟</h2>
+        <p>专注学习，高效休息</p>
+      </div>
+      <div class="pomodoro-container">
+        <div class="pomodoro-main">
+          <div class="timer-mode-switch">
+            <button class="active" data-mode="study" onclick="switchTimerMode('study')">📖 学习</button>
+            <button data-mode="shortBreak" onclick="switchTimerMode('shortBreak')">☕ 短休息</button>
+            <button data-mode="longBreak" onclick="switchTimerMode('longBreak')">😴 长休息</button>
+          </div>
+          <div class="timer-circle" id="timerCircle">
+            <svg viewBox="0 0 280 280">
+              <circle class="bg-circle" cx="140" cy="140" r="130"/>
+              <circle class="progress-circle" cx="140" cy="140" r="130"
+                      stroke-dasharray="816.8" stroke-dashoffset="0" id="progressCircle"/>
+            </svg>
+            <div class="timer-display" id="timerDisplay">25:00</div>
+            <div class="timer-status" id="timerStatus">准备开始</div>
+          </div>
+          <div class="timer-controls">
+            <button class="btn-reset" onclick="resetTimer()" title="重置">↺</button>
+            <button class="btn-play" id="btnPlay" onclick="toggleTimer()" title="开始">▶</button>
+            <button class="btn-reset" onclick="skipTimer()" title="跳过">⏭</button>
+          </div>
+        </div>
+        <div class="pomodoro-settings">
+          <h3>⚙ 时间设置</h3>
+          <div class="setting-group">
+            <label>学习时长（分钟）</label>
+            <div class="input-row">
+              <input type="number" id="studyDuration" value="25" min="1" max="120" onchange="applySettings()">
+              <span>分钟</span>
+            </div>
+          </div>
+          <div class="setting-group">
+            <label>短休息时长（分钟）</label>
+            <div class="input-row">
+              <input type="number" id="shortBreakDuration" value="5" min="1" max="30" onchange="applySettings()">
+              <span>分钟</span>
+            </div>
+          </div>
+          <div class="setting-group">
+            <label>长休息时长（分钟）</label>
+            <div class="input-row">
+              <input type="number" id="longBreakDuration" value="15" min="1" max="60" onchange="applySettings()">
+              <span>分钟</span>
+            </div>
+          </div>
+          <div class="pomodoro-stats">
+            <h3 style="font-size:14px; margin-bottom:4px;">📊 今日统计</h3>
+            <div class="stat-row">
+              <span>完成番茄数</span>
+              <span class="stat-value" id="pomodoroCount">0</span>
+            </div>
+            <div class="stat-row">
+              <span>总学习时间</span>
+              <span class="stat-value" id="totalStudyTime">0 分钟</span>
+            </div>
+          </div>
+        </div>
+        <div class="countdown-card" id="countdownCard">
+          <h3>⏳ 倒数日</h3>
+          <div class="countdown-display" id="countdownDisplay">
+            <div class="countdown-label">点击下方设置目标日期</div>
+            <div class="countdown-number">--</div>
+            <div class="countdown-unit">天</div>
+          </div>
+          <div class="countdown-edit">
+            <input type="text" id="countdownLabel" placeholder="目标名称，如：国考笔试" maxlength="20">
+            <input type="date" id="countdownDate">
+            <div class="countdown-edit-row">
+              <button class="btn btn-primary btn-sm" onclick="saveCountdown()">✅ 保存</button>
+              <button class="btn btn-outline btn-sm" onclick="clearCountdown()">清除</button>
+            </div>
+          </div>
+        </div>
+        <div class="clock-card" id="clockCard">
+          <h3>🕐 实时时钟</h3>
+          <div class="clock-display">
+            <span class="clock-time" id="clockTime">--:--</span><span class="clock-seconds" id="clockSeconds">:--</span>
+          </div>
+          <div class="clock-date" id="clockDate">----年--月--日</div>
+          <div class="clock-weekday" id="clockWeekday">星期-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 设置 ========== -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <h2>⚙ 设置</h2>
+        <p>导入或导出所有学习数据</p>
+      </div>
+      <div class="settings-container">
+        <div class="settings-card">
+          <h3>📤 导出数据</h3>
+          <p class="settings-desc">将所有数据导出为 JSON 文件，可用于备份或迁移到其他设备。</p>
+          <div class="settings-data-summary" id="exportSummary"></div>
+          <button class="btn btn-primary" onclick="exportAllData()">📥 下载数据备份</button>
+        </div>
+        <div class="settings-card">
+          <h3>📥 导入数据</h3>
+          <p class="settings-desc">从之前导出的备份文件恢复数据。导入会覆盖当前所有数据，请谨慎操作。</p>
+          <div class="import-data-zone" id="importDataZone" onclick="document.getElementById('importDataInput').click()">
+            <div class="import-icon">📁</div>
+            <p><strong>点击选择备份文件</strong></p>
+            <p style="font-size:12px;color:#94a3b8;">仅支持本工具导出的 .json 备份文件</p>
+          </div>
+          <input type="file" id="importDataInput" hidden accept=".json" onchange="handleDataImport(event)">
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()" style="margin-top:12px;">🗑 清除所有数据</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 错题本 ========== -->
+    <div class="page" id="page-wrong">
+      <div class="page-header">
+        <h2>❌ 错题本</h2>
+        <p>导入文档或图片错题，自定义分类，记录解题思路与答案</p>
+      </div>
+      <!-- 复习提醒区 -->
+      <div class="review-section" id="reviewSection">
+        <div class="review-header">
+          <h3>🔔 复习提醒</h3>
+          <div class="review-controls">
+            <label class="toggle-switch">
+              <input type="checkbox" id="reviewToggle" onchange="toggleReviewReminder()">
+              <span class="toggle-track"></span>
+              <span id="reviewToggleLabel">已关闭</span>
+            </label>
+            <select class="interval-select" id="reviewInterval" onchange="changeReviewInterval()">
+              <option value="1">每天复习</option>
+              <option value="3" selected>每3天</option>
+              <option value="5">每5天</option>
+              <option value="7">每周</option>
+            </select>
+          </div>
+        </div>
+        <div class="review-stats">
+          <div class="review-stat due">
+            <span>⏳ 待复习：</span>
+            <strong id="dueCount">0</strong>
+            <span>道</span>
+          </div>
+          <div class="review-stat reviewed">
+            <span>✅ 已复习：</span>
+            <strong id="reviewedCount">0</strong>
+            <span>道</span>
+          </div>
+          <div class="review-stat">
+            <span>📚 错题总数：</span>
+            <strong id="totalWrongCount">0</strong>
+            <span>道</span>
+          </div>
+        </div>
+        <div class="review-actions" id="reviewActions" style="display:none;">
+          <button class="btn btn-primary btn-sm" onclick="startReview()">▶ 开始复习待复习错题</button>
+          <button class="btn btn-outline btn-sm" onclick="markAllReviewed()">✅ 全部标记已复习</button>
+        </div>
+        <div class="review-actions" id="reviewingActions" style="display:none;">
+          <span style="font-size:13px;color:var(--primary);font-weight:600;">📖 复习模式中 — 请逐道标记</span>
+          <button class="btn btn-outline btn-sm" onclick="exitReviewMode()">退出复习</button>
+        </div>
+      </div>
+      <div class="wrong-questions-container">
+        <div class="upload-card">
+          <h3>📤 导入错题</h3>
+          <div class="category-mgmt-row">
+            <div class="subject-filter" id="uploadSubjectFilter"></div>
+            <button class="btn btn-outline btn-sm" onclick="openCategoryDialog()" style="flex-shrink:0;">⚙ 管理分类</button>
+          </div>
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📁</div>
+            <p><strong>点击上传</strong>或拖拽文件到此处</p>
+            <p class="hint">上传后点击文件名可填写解题思路和答案</p>
+            <p class="hint">支持图片（PNG, JPG）、文档（PDF, Word）、文本</p>
+          </div>
+          <input type="file" id="fileInput" multiple hidden accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.txt,.md" onchange="handleFileSelect(event)">
+          <ul class="file-list" id="fileList"></ul>
+          <div class="empty-state" id="fileEmpty">
+            <div class="empty-icon">📭</div>
+            <p>还没有导入错题</p>
+          </div>
+        </div>
+        <div class="upload-card">
+          <h3>📂 错题分类浏览</h3>
+          <div class="subject-filter" id="browseSubjectFilter"></div>
+          <ul class="file-list" id="browseFileList"></ul>
+          <div class="empty-state" id="browseEmpty">
+            <div class="empty-icon">🔍</div>
+            <p>选择分类查看错题</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ==================== EXCEL IMPORT DIALOG ==================== -->
+  <div class="import-dialog" id="importDialog">
+    <div class="dialog-content">
+      <h3>📥 从 Excel 导入日程</h3>
+      <div class="import-hint">
+        Excel 格式要求：<br>
+        共 7 列，依次对应 <code>周一~周日</code> 的内容。<br>
+        支持 .xlsx、.xls 格式，导入将覆盖当前周的日程。
+      </div>
+      <div class="import-zone" id="importZone" onclick="document.getElementById('excelFileInput').click()">
+        <div class="import-icon">📁</div>
+        <p><strong>点击选择 Excel 文件</strong></p>
+        <p style="font-size:12px;color:#94a3b8;">支持 .xlsx / .xls 格式</p>
+      </div>
+      <input type="file" id="excelFileInput" class="hidden-input" accept=".xlsx,.xls" onchange="handleExcelImport(event)">
+      <div class="dialog-actions">
+        <button class="btn btn-outline btn-sm" onclick="closeImportDialog()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== WRONG QUESTION DETAIL DIALOG ==================== -->
+  <div class="wrong-detail-dialog" id="wrongDetailDialog">
+    <div class="dialog-content">
+      <h3>✏ 错题详情</h3>
+      <div class="detail-file-preview" id="detailFilePreview"></div>
+      <div class="form-group">
+        <label>错题分类</label>
+        <select id="detailSubject"></select>
+      </div>
+      <div class="form-group">
+        <label>💡 解题思路</label>
+        <textarea id="detailApproach" placeholder="记录你的解题思路和分析过程..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>✅ 正确答案</label>
+        <textarea id="detailAnswer" placeholder="填写正确答案或解题步骤..."></textarea>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-outline btn-sm" onclick="closeWrongDetailDialog()">取消</button>
+        <button class="btn btn-primary btn-sm" onclick="saveWrongDetail()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CATEGORY MANAGEMENT DIALOG ==================== -->
+  <div class="cat-dialog" id="catDialog">
+    <div class="dialog-content">
+      <h3>📂 管理错题分类</h3>
+      <div class="cat-input-row">
+        <input type="text" id="newCatInput" placeholder="输入新分类名称，如：物理、化学..." onkeydown="if(event.key==='Enter')addCategory()">
+        <button class="btn btn-primary btn-sm" onclick="addCategory()">添加</button>
+      </div>
+      <ul class="cat-list" id="catList"></ul>
+      <div class="dialog-actions">
+        <button class="btn btn-outline btn-sm" onclick="closeCategoryDialog()">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== PAGE NAVIGATION ====================
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        const pageId = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + pageId).classList.add('active');
+        if (pageId === 'wrong') updateReviewUI();
+        if (pageId === 'settings') updateExportSummary();
+        if (pageId === 'todo') initTodoFilter();
+      });
+    });
+
+    // Update date in footer
+    function updateDate() {
+      const now = new Date();
+      document.getElementById('currentDate').textContent =
+        now.toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+    }
+    updateDate();
+
+    // ==================== SCHEDULE (Excel-like Table) ====================
+    const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    const rowLabels = ['言语', '资料', '数量', '判断', '政&常', '申论', '套题'];
+    let currentWeekOffset = 0;
+
+    // Data: { [weekKey]: [ [7 strings for Mon-Sun], ... ] }
+    let scheduleRowsData = JSON.parse(localStorage.getItem('scheduleRowsData') || '{}');
+
+    function getWeekDates(offset) {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + mondayOffset + offset * 7);
+      const dates = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        dates.push(d);
+      }
+      return dates;
+    }
+
+    function getWeekKey(offset) {
+      const dates = getWeekDates(offset);
+      const d = dates[0];
+      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    }
+
+    function formatDateRange(dates) {
+      const monday = dates[0];
+      const sunday = dates[6];
+      const fmt = d => `${d.getMonth() + 1}/${d.getDate()}`;
+      return `${fmt(monday)} - ${fmt(sunday)}`;
+    }
+
+    function getCurrentWeekRows() {
+      const weekKey = getWeekKey(currentWeekOffset);
+      if (!scheduleRowsData[weekKey]) {
+        scheduleRowsData[weekKey] = getDefaultRows();
+      }
+      // Migrate old format: { time, cells } → array
+      return scheduleRowsData[weekKey].map(row => {
+        if (Array.isArray(row)) return row;
+        return row.cells || ['', '', '', '', '', '', ''];
+      });
+    }
+
+    function getDefaultRows() {
+      return [
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', ''],
+      ];
+    }
+
+    function saveScheduleRows() {
+      localStorage.setItem('scheduleRowsData', JSON.stringify(scheduleRowsData));
+    }
+
+    function renderSchedule() {
+      const dates = getWeekDates(currentWeekOffset);
+      const weekKey = getWeekKey(currentWeekOffset);
+      document.getElementById('weekLabel').textContent = `📆 ${formatDateRange(dates)}`;
+
+      const rows = getCurrentWeekRows();
+
+      // Render table header
+      const head = document.getElementById('scheduleHead');
+      let headHtml = '<tr><th class="label-header">科目</th>';
+      dayNames.forEach((day, i) => {
+        const dateStr = `${dates[i].getMonth() + 1}/${dates[i].getDate()}`;
+        headHtml += `<th>${day}<span class="day-date">${dateStr}</span></th>`;
+      });
+      headHtml += '</tr>';
+      head.innerHTML = headHtml;
+
+      // Render table body
+      const body = document.getElementById('scheduleBody');
+      let bodyHtml = '';
+      rows.forEach((row, rowIdx) => {
+        const label = rowLabels[rowIdx] || '';
+        bodyHtml += `<tr data-row="${rowIdx}">`;
+        bodyHtml += `<td class="row-label">${label}</td>`;
+        for (let col = 0; col < 7; col++) {
+          const cellContent = (row && row[col]) ? row[col] : '';
+          bodyHtml += `<td><div class="cell-content" contenteditable="true" data-row="${rowIdx}" data-col="${col}" data-placeholder="点击输入">${escapeHtml(cellContent)}</div></td>`;
+        }
+        bodyHtml += `<td style="border:none;background:transparent;width:30px;min-width:30px;padding:0;">
+          <div class="row-delete-btn" onclick="deleteScheduleRow(${rowIdx})" title="删除此行">✕</div>
+        </td>`;
+        bodyHtml += '</tr>';
+      });
+      body.innerHTML = bodyHtml;
+
+      // Attach input listeners
+      attachCellListeners();
+    }
+
+    function attachCellListeners() {
+      document.querySelectorAll('#scheduleBody .cell-content').forEach(cell => {
+        cell.removeEventListener('input', handleCellInput);
+        cell.addEventListener('input', handleCellInput);
+        cell.removeEventListener('blur', handleCellBlur);
+        cell.addEventListener('blur', handleCellBlur);
+      });
+    }
+
+    function handleCellInput(e) {
+      // Real-time save
+      saveCellData(e.target);
+    }
+
+    function handleCellBlur(e) {
+      saveCellData(e.target, true);
+    }
+
+    function saveCellData(cellEl, syncTodo = false) {
+      const rowIdx = parseInt(cellEl.dataset.row);
+      const colIdx = parseInt(cellEl.dataset.col);
+      const weekKey = getWeekKey(currentWeekOffset);
+      if (!scheduleRowsData[weekKey]) scheduleRowsData[weekKey] = getDefaultRows();
+      const rows = scheduleRowsData[weekKey];
+      if (rowIdx >= rows.length) return;
+      if (!Array.isArray(rows[rowIdx])) rows[rowIdx] = ['', '', '', '', '', '', ''];
+      rows[rowIdx][colIdx] = cellEl.innerText.trim();
+      saveScheduleRows();
+      if (syncTodo) syncCellToTodo(weekKey, rowIdx, colIdx, rows[rowIdx][colIdx]);
+    }
+
+    // Row index → todo tag mapping
+    const rowTagMap = ['study', 'study', 'study', 'study', 'exam', 'study', 'study'];
+
+    function syncCellToTodo(weekKey, rowIdx, colIdx, text) {
+      const cellKey = `${weekKey}-${rowIdx}-${colIdx}`;
+      // Calculate the actual date from weekKey (Monday) + colIdx offset
+      const parts = weekKey.split('-');
+      const monday = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const cellDate = new Date(monday);
+      cellDate.setDate(monday.getDate() + colIdx);
+      const dateStr = formatDate(cellDate);
+
+      if (text) {
+        const existingIdx = todos.findIndex(t => t.scheduleKey === cellKey);
+        if (existingIdx !== -1) {
+          todos[existingIdx].text = text;
+          todos[existingIdx].date = dateStr;
+        } else {
+          const tag = rowTagMap[rowIdx] || 'study';
+          const sourceLabel = rowIdx < rowLabels.length ? rowLabels[rowIdx] : '其他';
+          todos.unshift({
+            text, tag, done: false, date: dateStr,
+            scheduleKey: cellKey,
+            scheduleSource: `${sourceLabel} · ${dayNames[colIdx]}`
+          });
+        }
+        saveTodos();
+      } else {
+        const existingIdx = todos.findIndex(t => t.scheduleKey === cellKey);
+        if (existingIdx !== -1) {
+          todos.splice(existingIdx, 1);
+          saveTodos();
+        }
+      }
+    }
+
+    function addScheduleRow() {
+      const weekKey = getWeekKey(currentWeekOffset);
+      if (!scheduleRowsData[weekKey]) scheduleRowsData[weekKey] = getDefaultRows();
+      scheduleRowsData[weekKey].push(['', '', '', '', '', '', '']);
+      saveScheduleRows();
+      renderSchedule();
+    }
+
+    function deleteScheduleRow(rowIdx) {
+      const weekKey = getWeekKey(currentWeekOffset);
+      if (!scheduleRowsData[weekKey]) return;
+      if (scheduleRowsData[weekKey].length <= 1) {
+        alert('至少保留一行！');
+        return;
+      }
+      // Remove synced todos for this row (any column)
+      const prefix = `${weekKey}-${rowIdx}-`;
+      todos = todos.filter(t => !t.scheduleKey || !t.scheduleKey.startsWith(prefix));
+      scheduleRowsData[weekKey].splice(rowIdx, 1);
+      saveScheduleRows();
+      saveTodos();
+      renderSchedule();
+    }
+
+    function clearCurrentWeek() {
+      if (!confirm('确定要清空当前周的所有日程内容吗？此操作不可撤销。')) return;
+      const weekKey = getWeekKey(currentWeekOffset);
+      // Remove synced todos for this week
+      const prefix = weekKey + '-';
+      todos = todos.filter(t => !t.scheduleKey || !t.scheduleKey.startsWith(prefix));
+      // Reset cells to empty but keep rows
+      if (scheduleRowsData[weekKey]) {
+        scheduleRowsData[weekKey] = scheduleRowsData[weekKey].map(() => ['', '', '', '', '', '', '']);
+      }
+      saveScheduleRows();
+      saveTodos();
+      renderSchedule();
+    }
+
+    function prevWeek() { currentWeekOffset--; renderSchedule(); }
+    function nextWeek() { currentWeekOffset++; renderSchedule(); }
+    function goToToday() { currentWeekOffset = 0; renderSchedule(); }
+
+    // ==================== EXCEL IMPORT ====================
+    function showImportDialog() {
+      document.getElementById('importDialog').classList.add('show');
+    }
+
+    function closeImportDialog() {
+      document.getElementById('importDialog').classList.remove('show');
+      document.getElementById('excelFileInput').value = '';
+    }
+
+    document.getElementById('importDialog').addEventListener('click', function(e) {
+      if (e.target === this) closeImportDialog();
+    });
+
+    function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+
+          if (jsonData.length === 0) {
+            alert('Excel 文件为空！');
+            return;
+          }
+
+          // Skip header row if it looks like a header
+          let dataStart = 0;
+          const firstRow = jsonData[0];
+          if (firstRow && firstRow.length > 0) {
+            const firstCell = String(firstRow[0] || '').trim();
+            if (firstCell.includes('时间') || firstCell.includes('星期') || firstCell === '时间段' || firstCell.includes('周一')) {
+              dataStart = 1;
+            }
+          }
+
+          const rows = [];
+          for (let i = dataStart; i < jsonData.length; i++) {
+            const excelRow = jsonData[i];
+            if (!excelRow || excelRow.every(c => !c)) continue; // Skip empty rows
+
+            const cells = [];
+            // Read up to 7 data columns; skip column 0 if there are 8+ columns (time column)
+            const colOffset = excelRow.length >= 8 ? 1 : 0;
+            for (let col = 0; col < 7; col++) {
+              cells.push(String(excelRow[col + colOffset] || ''));
+            }
+            rows.push(cells);
+          }
+
+          if (rows.length === 0) {
+            alert('未在 Excel 中找到有效数据！');
+            return;
+          }
+
+          const weekKey = getWeekKey(currentWeekOffset);
+          scheduleRowsData[weekKey] = rows;
+          saveScheduleRows();
+          renderSchedule();
+          closeImportDialog();
+          alert(`成功导入 ${rows.length} 行日程数据！`);
+        } catch (err) {
+          alert('Excel 文件解析失败：' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      event.target.value = '';
+    }
+
+    document.getElementById('importZone').addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.target.style.borderColor = 'var(--primary)';
+      e.target.style.background = '#f8faff';
+    });
+    document.getElementById('importZone').addEventListener('dragleave', (e) => {
+      e.target.style.borderColor = '#cbd5e1';
+      e.target.style.background = '';
+    });
+    document.getElementById('importZone').addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.target.style.borderColor = '#cbd5e1';
+      e.target.style.background = '';
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const dt = new DataTransfer();
+        dt.items.add(files[0]);
+        document.getElementById('excelFileInput').files = dt.files;
+        handleExcelImport({ target: { files: dt.files } });
+      }
+    });
+
+    // ==================== TODO LIST ====================
+    let todos = JSON.parse(localStorage.getItem('todos') || '[]');
+    let todoFilterDate = null; // null = show all, string YYYY-MM-DD = filter by date
+
+    function initTodoFilter() {
+      const today = getTodayStr();
+      document.getElementById('todoDate').value = today;
+      if (todoFilterDate === null) {
+        todoFilterDate = today;
+        document.getElementById('todoFilterDate').value = today;
+      }
+      renderTodos();
+    }
+
+    function onFilterDateChange() {
+      const val = document.getElementById('todoFilterDate').value;
+      todoFilterDate = val || null;
+      renderTodos();
+    }
+
+    function renderTodos() {
+      const filterDate = todoFilterDate;
+      let filtered = todos;
+      if (filterDate) {
+        filtered = todos.filter(t => t.date === filterDate);
+      }
+
+      const pending = filtered.filter(t => !t.done);
+      const done = filtered.filter(t => t.done);
+
+      document.getElementById('pendingCount').textContent = pending.length;
+      document.getElementById('doneCount').textContent = done.length;
+
+      const pendingList = document.getElementById('pendingList');
+      const doneList = document.getElementById('doneList');
+      const pendingEmpty = document.getElementById('pendingEmpty');
+      const doneEmpty = document.getElementById('doneEmpty');
+
+      pendingList.innerHTML = pending.map((t, i) => {
+        const realIdx = todos.indexOf(t);
+        const srcHtml = t.scheduleSource ? `<span class="todo-source">📅 ${escapeHtml(t.scheduleSource)}</span>` : '';
+        return `<li>
+          <div class="todo-check" onclick="toggleTodo(${realIdx})"></div>
+          <span class="todo-text">${escapeHtml(t.text)}</span>
+          <span class="todo-tag ${t.tag}">${tagLabel(t.tag)}</span>
+          ${srcHtml}
+          <button class="todo-delete" onclick="deleteTodo(${realIdx})">✕</button>
+        </li>`;
+      }).join('');
+
+      doneList.innerHTML = done.map((t, i) => {
+        const realIdx = todos.indexOf(t);
+        const srcHtml = t.scheduleSource ? `<span class="todo-source">📅 ${escapeHtml(t.scheduleSource)}</span>` : '';
+        return `<li class="completed">
+          <div class="todo-check" onclick="toggleTodo(${realIdx})"></div>
+          <span class="todo-text">${escapeHtml(t.text)}</span>
+          <span class="todo-tag ${t.tag}">${tagLabel(t.tag)}</span>
+          ${srcHtml}
+          <button class="todo-delete" onclick="deleteTodo(${realIdx})">✕</button>
+        </li>`;
+      }).join('');
+
+      pendingEmpty.style.display = pending.length === 0 ? 'block' : 'none';
+      doneEmpty.style.display = done.length === 0 ? 'block' : 'none';
+    }
+
+    function tagLabel(tag) {
+      const map = { study: '学习', exam: '考试', other: '其他' };
+      return map[tag] || tag;
+    }
+
+    function addTodo() {
+      const input = document.getElementById('todoInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const tag = document.getElementById('todoTag').value;
+      const date = document.getElementById('todoDate').value || getTodayStr();
+      todos.unshift({ text, tag, done: false, date });
+      // If filtering, auto-set filter to match the new todo's date
+      if (todoFilterDate && todoFilterDate !== date) {
+        todoFilterDate = date;
+        document.getElementById('todoFilterDate').value = date;
+      }
+      saveTodos();
+      input.value = '';
+      input.focus();
+    }
+
+    function setTodoFilterToday() {
+      const today = getTodayStr();
+      todoFilterDate = today;
+      document.getElementById('todoFilterDate').value = today;
+      renderTodos();
+    }
+
+    function setTodoFilterAll() {
+      todoFilterDate = null;
+      document.getElementById('todoFilterDate').value = getTodayStr();
+      renderTodos();
+    }
+
+    function toggleTodo(index) {
+      todos[index].done = !todos[index].done;
+      saveTodos();
+    }
+
+    function deleteTodo(index) {
+      todos.splice(index, 1);
+      saveTodos();
+    }
+
+    function saveTodos() {
+      localStorage.setItem('todos', JSON.stringify(todos));
+      renderTodos();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function getTodayStr() {
+      return formatDate(new Date());
+    }
+
+    // ==================== POMODORO TIMER ====================
+    const CIRCUMFERENCE = 2 * Math.PI * 130; // ~816.8
+
+    let timerState = {
+      mode: 'study',
+      studyDuration: 25,
+      shortBreakDuration: 5,
+      longBreakDuration: 15,
+      timeLeft: 25 * 60,
+      totalTime: 25 * 60,
+      running: false,
+      intervalId: null,
+      pomodoroCount: parseInt(localStorage.getItem('pomodoroCount') || '0'),
+      totalStudyMinutes: parseInt(localStorage.getItem('totalStudyMinutes') || '0'),
+      todayDate: new Date().toDateString()
+    };
+
+    // Reset daily stats if new day
+    const savedDate = localStorage.getItem('pomodoroDate');
+    const todayStr = new Date().toDateString();
+    if (savedDate !== todayStr) {
+      timerState.pomodoroCount = 0;
+      timerState.totalStudyMinutes = 0;
+      localStorage.setItem('pomodoroCount', '0');
+      localStorage.setItem('totalStudyMinutes', '0');
+      localStorage.setItem('pomodoroDate', todayStr);
+    }
+
+    function applySettings() {
+      const study = parseInt(document.getElementById('studyDuration').value) || 25;
+      const shortBr = parseInt(document.getElementById('shortBreakDuration').value) || 5;
+      const longBr = parseInt(document.getElementById('longBreakDuration').value) || 15;
+      timerState.studyDuration = study;
+      timerState.shortBreakDuration = shortBr;
+      timerState.longBreakDuration = longBr;
+      if (!timerState.running) resetTimer();
+    }
+
+    function switchTimerMode(mode) {
+      timerState.mode = mode;
+      document.querySelectorAll('.timer-mode-switch button').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+      if (timerState.running) {
+        clearInterval(timerState.intervalId);
+        timerState.running = false;
+        updatePlayButton();
+      }
+      resetTimer();
+    }
+
+    function resetTimer() {
+      if (timerState.running) {
+        clearInterval(timerState.intervalId);
+        timerState.running = false;
+        updatePlayButton();
+      }
+      const durations = {
+        study: timerState.studyDuration,
+        shortBreak: timerState.shortBreakDuration,
+        longBreak: timerState.longBreakDuration
+      };
+      timerState.totalTime = durations[timerState.mode] * 60;
+      timerState.timeLeft = timerState.totalTime;
+      updateTimerDisplay();
+      updateProgress();
+      updateModeUI();
+    }
+
+    function toggleTimer() {
+      if (timerState.running) {
+        clearInterval(timerState.intervalId);
+        timerState.running = false;
+        document.getElementById('timerStatus').textContent = '已暂停';
+      } else {
+        if (timerState.timeLeft <= 0) resetTimer();
+        timerState.running = true;
+        document.getElementById('timerStatus').textContent =
+          timerState.mode === 'study' ? '专注学习中...' : '休息中...';
+        timerState.intervalId = setInterval(tick, 1000);
+      }
+      updatePlayButton();
+    }
+
+    function tick() {
+      if (timerState.timeLeft > 0) {
+        timerState.timeLeft--;
+        updateTimerDisplay();
+        updateProgress();
+      }
+      if (timerState.timeLeft <= 0) {
+        clearInterval(timerState.intervalId);
+        timerState.running = false;
+        updatePlayButton();
+        timerComplete();
+      }
+    }
+
+    function timerComplete() {
+      if (timerState.mode === 'study') {
+        timerState.pomodoroCount++;
+        timerState.totalStudyMinutes += timerState.studyDuration;
+        localStorage.setItem('pomodoroCount', timerState.pomodoroCount.toString());
+        localStorage.setItem('totalStudyMinutes', timerState.totalStudyMinutes.toString());
+        updateStats();
+        alert('🎉 番茄钟完成！休息一下吧~');
+        switchTimerMode('shortBreak');
+      } else {
+        alert('⏰ 休息时间结束！开始新的学习吧~');
+        switchTimerMode('study');
+      }
+      updateModeUI();
+    }
+
+    function skipTimer() {
+      if (timerState.running) {
+        clearInterval(timerState.intervalId);
+        timerState.running = false;
+        updatePlayButton();
+      }
+      timerState.timeLeft = 0;
+      timerComplete();
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerState.timeLeft / 60);
+      const secs = timerState.timeLeft % 60;
+      document.getElementById('timerDisplay').textContent =
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function updateProgress() {
+      const progress = timerState.timeLeft / timerState.totalTime;
+      const offset = CIRCUMFERENCE * (1 - progress);
+      document.getElementById('progressCircle').setAttribute('stroke-dashoffset', offset);
+    }
+
+    function updatePlayButton() {
+      const btn = document.getElementById('btnPlay');
+      if (timerState.running) {
+        btn.textContent = '⏸';
+        btn.classList.add('paused');
+      } else {
+        btn.textContent = '▶';
+        btn.classList.remove('paused');
+      }
+    }
+
+    function updateModeUI() {
+      const circle = document.getElementById('timerCircle');
+      circle.classList.toggle('break-mode', timerState.mode !== 'study');
+      const statusMap = { study: '准备开始', shortBreak: '准备休息', longBreak: '准备长休息' };
+      document.getElementById('timerStatus').textContent = statusMap[timerState.mode];
+    }
+
+    function updateStats() {
+      document.getElementById('pomodoroCount').textContent = timerState.pomodoroCount;
+      document.getElementById('totalStudyTime').textContent = timerState.totalStudyMinutes + ' 分钟';
+    }
+
+    // ==================== COUNTDOWN ====================
+    let countdownData = JSON.parse(localStorage.getItem('countdownData') || 'null');
+
+    function renderCountdown() {
+      const display = document.getElementById('countdownDisplay');
+      if (!countdownData || !countdownData.targetDate) {
+        display.className = 'countdown-display';
+        display.innerHTML = `
+          <div class="countdown-label">点击下方设置目标日期</div>
+          <div class="countdown-number">--</div>
+          <div class="countdown-unit">天</div>`;
+        return;
+      }
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const target = new Date(countdownData.targetDate + 'T00:00:00');
+      const diffTime = target.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      const label = countdownData.label || '目标日期';
+      const dateStr = target.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      if (diffDays < 0) {
+        display.className = 'countdown-display past';
+        display.innerHTML = `
+          <div class="countdown-label">${escapeHtml(label)}</div>
+          <div class="countdown-number">已过${Math.abs(diffDays)}</div>
+          <div class="countdown-unit">天</div>
+          <div class="countdown-target-date">${dateStr}</div>`;
+      } else if (diffDays === 0) {
+        display.className = 'countdown-display today';
+        display.innerHTML = `
+          <div class="countdown-label">${escapeHtml(label)}</div>
+          <div class="countdown-number">🎯 今天</div>
+          <div class="countdown-unit">就是今天！</div>
+          <div class="countdown-target-date">${dateStr}</div>`;
+      } else {
+        display.className = 'countdown-display';
+        display.innerHTML = `
+          <div class="countdown-label">${escapeHtml(label)}</div>
+          <div class="countdown-number">${diffDays}</div>
+          <div class="countdown-unit">天</div>
+          <div class="countdown-target-date">${dateStr}</div>`;
+      }
+    }
+
+    function saveCountdown() {
+      const label = document.getElementById('countdownLabel').value.trim();
+      const date = document.getElementById('countdownDate').value;
+      if (!date) {
+        alert('请选择目标日期！');
+        return;
+      }
+      countdownData = { label: label || '目标日期', targetDate: date };
+      localStorage.setItem('countdownData', JSON.stringify(countdownData));
+      renderCountdown();
+    }
+
+    function clearCountdown() {
+      countdownData = null;
+      localStorage.removeItem('countdownData');
+      document.getElementById('countdownLabel').value = '';
+      document.getElementById('countdownDate').value = '';
+      renderCountdown();
+    }
+
+    function loadCountdownInputs() {
+      if (countdownData) {
+        document.getElementById('countdownLabel').value = countdownData.label || '';
+        document.getElementById('countdownDate').value = countdownData.targetDate || '';
+      }
+    }
+
+    // ==================== REAL-TIME CLOCK ====================
+    const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+    function updateClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+
+      document.getElementById('clockTime').textContent = hh + ':' + mm;
+      document.getElementById('clockSeconds').textContent = ':' + ss;
+
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+      const d = now.getDate();
+      document.getElementById('clockDate').textContent = y + '年' + m + '月' + d + '日';
+      document.getElementById('clockWeekday').textContent = weekDays[now.getDay()];
+    }
+
+    // ==================== WRONG QUESTIONS ====================
+    let wrongFiles = JSON.parse(localStorage.getItem('wrongFiles') || '[]');
+
+    // Review reminder
+    let reviewReminderEnabled = JSON.parse(localStorage.getItem('reviewReminderEnabled') || 'false');
+    let reviewIntervalDays = parseInt(localStorage.getItem('reviewIntervalDays') || '3');
+    let isReviewMode = false;
+
+    // All categories are user-defined
+    let customCategories = JSON.parse(localStorage.getItem('customCategories') || '[]');
+    // If localStorage has no categories (first visit), we start with an empty list
+    // User must create their own categories via the "管理分类" dialog
+
+    function getAllCategories() {
+      return [...customCategories];
+    }
+
+    function getCategoryLabel(subjectId) {
+      const all = getAllCategories();
+      const found = all.find(c => c.id === subjectId);
+      return found ? found.label : (subjectId || '未分类');
+    }
+
+    let currentUploadSubject = 'all';
+    let currentBrowseSubject = 'all';
+    let editingWrongFileIndex = null;
+
+    // Render category filter tags
+    function renderCategoryFilters() {
+      const categories = getAllCategories();
+
+      // Upload filter
+      const uploadFilter = document.getElementById('uploadSubjectFilter');
+      uploadFilter.innerHTML = '<span class="filter-tag' + (currentUploadSubject === 'all' ? ' active' : '') + '" data-subject="all">全部</span>';
+      categories.forEach(cat => {
+        uploadFilter.innerHTML += '<span class="filter-tag' + (currentUploadSubject === cat.id ? ' active' : '') + '" data-subject="' + escapeHtml(cat.id) + '">' + escapeHtml(cat.label) + '</span>';
+      });
+
+      // Browse filter
+      const browseFilter = document.getElementById('browseSubjectFilter');
+      browseFilter.innerHTML = '<span class="filter-tag' + (currentBrowseSubject === 'all' ? ' active' : '') + '" data-subject="all">全部</span>';
+      categories.forEach(cat => {
+        browseFilter.innerHTML += '<span class="filter-tag' + (currentBrowseSubject === cat.id ? ' active' : '') + '" data-subject="' + escapeHtml(cat.id) + '">' + escapeHtml(cat.label) + '</span>';
+      });
+
+      // Also update detail dialog select
+      const detailSelect = document.getElementById('detailSubject');
+      detailSelect.innerHTML = '';
+      if (categories.length === 0) {
+        detailSelect.innerHTML = '<option value="">-- 请先创建分类 --</option>';
+      } else {
+        categories.forEach(cat => {
+          detailSelect.innerHTML += '<option value="' + escapeHtml(cat.id) + '">' + escapeHtml(cat.label) + '</option>';
+        });
+      }
+    }
+
+    // Category management dialog
+    function openCategoryDialog() {
+      renderCategoryList();
+      document.getElementById('catDialog').classList.add('show');
+      setTimeout(() => document.getElementById('newCatInput').focus(), 100);
+    }
+
+    function closeCategoryDialog() {
+      document.getElementById('catDialog').classList.remove('show');
+      renderCategoryFilters();
+      renderWrongFiles();
+    }
+
+    function renderCategoryList() {
+      const list = document.getElementById('catList');
+      const categories = getAllCategories();
+      if (categories.length === 0) {
+        list.innerHTML = '<li style="color:#94a3b8; justify-content:center;">暂无分类，请添加</li>';
+        return;
+      }
+      list.innerHTML = categories.map(cat =>
+        `<li>
+          <span>${escapeHtml(cat.label)}</span>
+          <button class="cat-delete" onclick="deleteCategory('${cat.id}')" title="删除分类">✕</button>
+        </li>`
+      ).join('');
+    }
+
+    function addCategory() {
+      const input = document.getElementById('newCatInput');
+      const name = input.value.trim();
+      if (!name) return;
+      // Generate id from name
+      const id = 'custom_' + name.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '_');
+      // Check duplicate
+      const all = getAllCategories();
+      if (all.find(c => c.id === id || c.label === name)) {
+        alert('该分类已存在！');
+        return;
+      }
+      customCategories.push({ id, label: name });
+      localStorage.setItem('customCategories', JSON.stringify(customCategories));
+      input.value = '';
+      renderCategoryList();
+      renderCategoryFilters();
+    }
+
+    function deleteCategory(id) {
+      if (!confirm('确定要删除该分类吗？该分类下的错题不会删除。')) return;
+      customCategories = customCategories.filter(c => c.id !== id);
+      localStorage.setItem('customCategories', JSON.stringify(customCategories));
+      if (currentUploadSubject === id) currentUploadSubject = 'all';
+      if (currentBrowseSubject === id) currentBrowseSubject = 'all';
+      renderCategoryList();
+      renderCategoryFilters();
+      renderWrongFiles();
+    }
+
+    function renderWrongFiles() {
+      const fileList = document.getElementById('fileList');
+      const browseFileList = document.getElementById('browseFileList');
+      const fileEmpty = document.getElementById('fileEmpty');
+      const browseEmpty = document.getElementById('browseEmpty');
+
+      // Upload list
+      const uploadFiles = currentUploadSubject === 'all'
+        ? wrongFiles
+        : wrongFiles.filter(f => f.subject === currentUploadSubject);
+
+      fileList.innerHTML = uploadFiles.map(f => {
+        const realIdx = wrongFiles.indexOf(f);
+        const hasNotes = (f.approach && f.approach.trim()) || (f.answer && f.answer.trim());
+        const isDue = isReviewMode && getDueQuestions().includes(f);
+        return `<li>
+          <span class="file-icon">${getFileIcon(f.name)}</span>
+          <div class="file-clickable" onclick="openWrongDetail(${realIdx})" title="点击编辑解题思路和答案">
+            <div class="file-name">${escapeHtml(f.name)}${hasNotes ? '<span class="file-notes-indicator">📝 有笔记</span>' : ''}${isDue ? '<span class="review-note">待复习</span>' : ''}</div>
+            <div class="file-meta">${getCategoryLabel(f.subject)} · ${formatFileSize(f.size)} · ${f.date}${f.lastReviewed ? ' · 上次复习:' + formatReviewDate(f.lastReviewed) : ''}</div>
+          </div>
+          <button class="file-delete" onclick="event.stopPropagation();deleteWrongFile(${realIdx})">✕</button>
+        </li>`;
+      }).join('');
+
+      fileEmpty.style.display = uploadFiles.length === 0 ? 'block' : 'none';
+
+      // Browse list / Review list
+      if (isReviewMode) {
+        const browseCard = browseFileList.closest('.upload-card');
+        if (browseCard) browseCard.querySelector('h3').textContent = '📖 待复习错题';
+        const dueQuestions = getDueQuestions();
+        browseFileList.className = 'file-list review-file-list';
+        browseFileList.innerHTML = dueQuestions.map(f => {
+          const realIdx = wrongFiles.indexOf(f);
+          const hasNotes = (f.approach && f.approach.trim()) || (f.answer && f.answer.trim());
+          return `<li>
+            <span class="file-icon">${getFileIcon(f.name)}</span>
+            <div class="file-clickable" onclick="openWrongDetail(${realIdx})" title="点击编辑解题思路和答案">
+              <div class="file-name">${escapeHtml(f.name)}${hasNotes ? '<span class="file-notes-indicator">📝 有笔记</span>' : ''}</div>
+              <div class="file-meta">${getCategoryLabel(f.subject)} · ${formatFileSize(f.size)} · ${f.date}</div>
+            </div>
+            <button class="btn-done-review" onclick="event.stopPropagation();markAsReviewed(${realIdx})">✅ 已复习</button>
+          </li>`;
+        }).join('');
+        browseEmpty.style.display = dueQuestions.length === 0 ? 'block' : 'none';
+        const browseEmptyEl = document.getElementById('browseEmpty');
+        if (browseEmptyEl && dueQuestions.length === 0) browseEmptyEl.querySelector('p').textContent = '🎉 暂无待复习错题';
+      } else {
+        const browseCard = browseFileList.closest('.upload-card');
+        if (browseCard) browseCard.querySelector('h3').textContent = '📂 错题分类浏览';
+        browseFileList.className = 'file-list';
+        const browseFiles = currentBrowseSubject === 'all'
+          ? wrongFiles
+          : wrongFiles.filter(f => f.subject === currentBrowseSubject);
+
+        browseFileList.innerHTML = browseFiles.map(f => {
+          const realIdx = wrongFiles.indexOf(f);
+          const hasNotes = (f.approach && f.approach.trim()) || (f.answer && f.answer.trim());
+          return `<li>
+            <span class="file-icon">${getFileIcon(f.name)}</span>
+            <div class="file-clickable" onclick="openWrongDetail(${realIdx})" title="点击编辑解题思路和答案">
+              <div class="file-name">${escapeHtml(f.name)}${hasNotes ? '<span class="file-notes-indicator">📝 有笔记</span>' : ''}</div>
+              <div class="file-meta">${getCategoryLabel(f.subject)} · ${formatFileSize(f.size)} · ${f.date}${f.lastReviewed ? ' · 上次复习:' + formatReviewDate(f.lastReviewed) : ''}</div>
+            </div>
+            <button class="file-delete" onclick="event.stopPropagation();deleteWrongFile(${realIdx})">✕</button>
+          </li>`;
+        }).join('');
+        browseEmpty.style.display = browseFiles.length === 0 ? 'block' : 'none';
+      }
+    }
+
+    function formatReviewDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    }
+
+    // Wrong question detail dialog
+    function openWrongDetail(index) {
+      editingWrongFileIndex = index;
+      const file = wrongFiles[index];
+      renderCategoryFilters(); // ensure select is populated
+
+      document.getElementById('detailFilePreview').innerHTML =
+        `<span class="file-icon">${getFileIcon(file.name)}</span>
+         <div class="file-info">
+           <div class="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+           <div style="font-size:12px;color:var(--text-secondary);">${formatFileSize(file.size)} · ${file.date}</div>
+         </div>`;
+
+      const categories = getAllCategories();
+      const subjectValue = file.subject || '';
+      const foundCat = categories.find(c => c.id === subjectValue);
+      document.getElementById('detailSubject').value = foundCat ? subjectValue : (categories.length > 0 ? categories[0].id : '');
+      document.getElementById('detailApproach').value = file.approach || '';
+      document.getElementById('detailAnswer').value = file.answer || '';
+      document.getElementById('wrongDetailDialog').classList.add('show');
+    }
+
+    function closeWrongDetailDialog() {
+      document.getElementById('wrongDetailDialog').classList.remove('show');
+      editingWrongFileIndex = null;
+    }
+
+    function saveWrongDetail() {
+      if (editingWrongFileIndex === null) return;
+      const subjectVal = document.getElementById('detailSubject').value;
+      if (subjectVal) {
+        wrongFiles[editingWrongFileIndex].subject = subjectVal;
+      }
+      wrongFiles[editingWrongFileIndex].approach = document.getElementById('detailApproach').value.trim();
+      wrongFiles[editingWrongFileIndex].answer = document.getElementById('detailAnswer').value.trim();
+      if (isReviewMode) {
+        wrongFiles[editingWrongFileIndex].lastReviewed = new Date().toISOString();
+      }
+      saveWrongFiles();
+      closeWrongDetailDialog();
+    }
+
+    function handleFileSelect(event) {
+      const files = event.target.files;
+      const categories = getAllCategories();
+      const defaultSubject = categories.length > 0 ? categories[0].id : '';
+      for (const file of files) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const subject = (currentUploadSubject !== 'all' && categories.find(c => c.id === currentUploadSubject)) ? currentUploadSubject : defaultSubject;
+          wrongFiles.unshift({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            subject: subject,
+            date: new Date().toLocaleDateString('zh-CN'),
+            approach: '',
+            answer: '',
+            dataUrl: e.target.result
+          });
+          saveWrongFiles();
+          // Auto-open detail dialog for newly added file only if categories exist
+          if (categories.length > 0) {
+            setTimeout(() => openWrongDetail(0), 200);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+      event.target.value = '';
+    }
+
+    function deleteWrongFile(index) {
+      if (editingWrongFileIndex === index) closeWrongDetailDialog();
+      wrongFiles.splice(index, 1);
+      saveWrongFiles();
+    }
+
+    function saveWrongFiles() {
+      if (wrongFiles.length > 50) wrongFiles = wrongFiles.slice(0, 50);
+      const store = wrongFiles.map(f => ({
+        name: f.name, size: f.size, type: f.type,
+        subject: f.subject, date: f.date,
+        approach: f.approach || '', answer: f.answer || '',
+        lastReviewed: f.lastReviewed || null
+      }));
+      localStorage.setItem('wrongFiles', JSON.stringify(store));
+      renderWrongFiles();
+      updateReviewUI();
+    }
+
+    function getFileIcon(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      if (['png','jpg','jpeg','gif','webp'].includes(ext)) return '🖼';
+      if (ext === 'pdf') return '📕';
+      if (['doc','docx'].includes(ext)) return '📝';
+      if (['txt','md'].includes(ext)) return '📄';
+      return '📎';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // ==================== REVIEW REMINDER ====================
+    function updateReviewUI() {
+      const toggle = document.getElementById('reviewToggle');
+      const label = document.getElementById('reviewToggleLabel');
+      const interval = document.getElementById('reviewInterval');
+      toggle.checked = reviewReminderEnabled;
+      label.textContent = reviewReminderEnabled ? '已开启' : '已关闭';
+      interval.value = reviewIntervalDays.toString();
+
+      const due = getDueQuestions();
+      const reviewed = wrongFiles.filter(f => f.lastReviewed).length;
+      document.getElementById('dueCount').textContent = due.length;
+      document.getElementById('reviewedCount').textContent = reviewed;
+      document.getElementById('totalWrongCount').textContent = wrongFiles.length;
+
+      const reviewActions = document.getElementById('reviewActions');
+      const reviewingActions = document.getElementById('reviewingActions');
+
+      if (isReviewMode) {
+        reviewActions.style.display = 'none';
+        reviewingActions.style.display = 'flex';
+      } else {
+        reviewingActions.style.display = 'none';
+        reviewActions.style.display = due.length > 0 ? 'flex' : 'none';
+      }
+
+      // Update sidebar badge
+      const badge = document.getElementById('reviewBadge');
+      if (reviewReminderEnabled && due.length > 0) {
+        badge.textContent = due.length;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function getDueQuestions() {
+      return wrongFiles.filter(f => {
+        if (!f.lastReviewed) return true;
+        const reviewedDate = new Date(f.lastReviewed);
+        if (isNaN(reviewedDate.getTime())) return true;
+        const diffDays = (new Date() - reviewedDate) / (1000 * 60 * 60 * 24);
+        return diffDays >= reviewIntervalDays;
+      });
+    }
+
+    function toggleReviewReminder() {
+      reviewReminderEnabled = !reviewReminderEnabled;
+      localStorage.setItem('reviewReminderEnabled', JSON.stringify(reviewReminderEnabled));
+      updateReviewUI();
+    }
+
+    function changeReviewInterval() {
+      reviewIntervalDays = parseInt(document.getElementById('reviewInterval').value);
+      localStorage.setItem('reviewIntervalDays', reviewIntervalDays.toString());
+      updateReviewUI();
+    }
+
+    function startReview() {
+      isReviewMode = true;
+      currentBrowseSubject = 'all';
+      // Redirect the browse card to show due questions only
+      renderCategoryFilters();
+      renderWrongFiles();
+      updateReviewUI();
+    }
+
+    function exitReviewMode() {
+      isReviewMode = false;
+      renderCategoryFilters();
+      renderWrongFiles();
+      updateReviewUI();
+    }
+
+    function markAsReviewed(index) {
+      wrongFiles[index].lastReviewed = new Date().toISOString();
+      saveWrongFiles();
+      if (isReviewMode) {
+        renderWrongFiles();
+        updateReviewUI();
+      }
+    }
+
+    function markAllReviewed() {
+      if (!confirm('确定将所有待复习错题标记为已复习？')) return;
+      const now = new Date().toISOString();
+      wrongFiles.forEach(f => { f.lastReviewed = now; });
+      saveWrongFiles();
+      updateReviewUI();
+    }
+
+    // Subject filter click handlers
+    document.getElementById('uploadSubjectFilter').addEventListener('click', function(e) {
+      if (e.target.classList.contains('filter-tag')) {
+        this.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        currentUploadSubject = e.target.dataset.subject;
+        renderCategoryFilters();
+        renderWrongFiles();
+      }
+    });
+
+    document.getElementById('browseSubjectFilter').addEventListener('click', function(e) {
+      if (e.target.classList.contains('filter-tag')) {
+        this.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        currentBrowseSubject = e.target.dataset.subject;
+        renderCategoryFilters();
+        renderWrongFiles();
+      }
+    });
+
+    // Close dialogs by clicking backdrop
+    document.getElementById('wrongDetailDialog').addEventListener('click', function(e) {
+      if (e.target === this) closeWrongDetailDialog();
+    });
+    document.getElementById('catDialog').addEventListener('click', function(e) {
+      if (e.target === this) closeCategoryDialog();
+    });
+
+    // Drag and drop
+    const uploadZone = document.getElementById('uploadZone');
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('drag-over');
+    });
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const dt = new DataTransfer();
+        for (const file of files) dt.items.add(file);
+        document.getElementById('fileInput').files = dt.files;
+        handleFileSelect({ target: { files: dt.files } });
+      }
+    });
+
+    // ==================== SETTINGS: IMPORT / EXPORT ====================
+    function getBackupData() {
+      return {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        data: {
+          scheduleRowsData: JSON.parse(localStorage.getItem('scheduleRowsData') || '{}'),
+          todos: JSON.parse(localStorage.getItem('todos') || '[]'),
+          wrongFiles: JSON.parse(localStorage.getItem('wrongFiles') || '[]'),
+          customCategories: JSON.parse(localStorage.getItem('customCategories') || '[]'),
+          reviewReminderEnabled: JSON.parse(localStorage.getItem('reviewReminderEnabled') || 'false'),
+          reviewIntervalDays: localStorage.getItem('reviewIntervalDays') || '3',
+          pomodoroCount: localStorage.getItem('pomodoroCount') || '0',
+          totalStudyMinutes: localStorage.getItem('totalStudyMinutes') || '0'
+        }
+      };
+    }
+
+    function updateExportSummary() {
+      const backup = getBackupData();
+      const d = backup.data;
+      const scheduleWeeks = Object.keys(d.scheduleRowsData).length;
+      let totalCells = 0;
+      Object.values(d.scheduleRowsData).forEach(rows => {
+        if (Array.isArray(rows)) {
+          rows.forEach(row => {
+            if (Array.isArray(row)) totalCells += row.filter(c => c && c.trim()).length;
+          });
+        }
+      });
+      document.getElementById('exportSummary').innerHTML =
+        `📅 <strong>${scheduleWeeks}</strong> 周日程 &nbsp;|&nbsp; ✅ <strong>${d.todos.length}</strong> 条待办 &nbsp;|&nbsp; ❌ <strong>${d.wrongFiles.length}</strong> 道错题`;
+    }
+
+    function exportAllData() {
+      const backup = getBackupData();
+      const jsonStr = JSON.stringify(backup, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+      a.href = url;
+      a.download = `学习规划备份_${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function handleDataImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const backup = JSON.parse(e.target.result);
+          if (!backup.version || !backup.data) {
+            showImportResult('文件格式不正确，请选择本工具导出的备份文件。', 'error');
+            return;
+          }
+          if (!confirm(
+            '导入数据将覆盖当前所有数据（日程、待办、错题本、分类、设置），确定要继续吗？\n\n' +
+            '建议先导出当前数据作为备份。'
+          )) return;
+
+          const d = backup.data;
+          if (d.scheduleRowsData !== undefined) localStorage.setItem('scheduleRowsData', JSON.stringify(d.scheduleRowsData));
+          if (d.todos !== undefined) localStorage.setItem('todos', JSON.stringify(d.todos));
+          if (d.wrongFiles !== undefined) localStorage.setItem('wrongFiles', JSON.stringify(d.wrongFiles));
+          if (d.customCategories !== undefined) localStorage.setItem('customCategories', JSON.stringify(d.customCategories));
+          if (d.reviewReminderEnabled !== undefined) localStorage.setItem('reviewReminderEnabled', JSON.stringify(d.reviewReminderEnabled));
+          if (d.reviewIntervalDays !== undefined) localStorage.setItem('reviewIntervalDays', d.reviewIntervalDays);
+          if (d.pomodoroCount !== undefined) localStorage.setItem('pomodoroCount', d.pomodoroCount);
+          if (d.totalStudyMinutes !== undefined) localStorage.setItem('totalStudyMinutes', d.totalStudyMinutes);
+
+          // Reload from localStorage
+          scheduleRowsData = JSON.parse(localStorage.getItem('scheduleRowsData') || '{}');
+          todos = JSON.parse(localStorage.getItem('todos') || '[]');
+          wrongFiles = JSON.parse(localStorage.getItem('wrongFiles') || '[]');
+          customCategories = JSON.parse(localStorage.getItem('customCategories') || '[]');
+          reviewReminderEnabled = JSON.parse(localStorage.getItem('reviewReminderEnabled') || 'false');
+          reviewIntervalDays = parseInt(localStorage.getItem('reviewIntervalDays') || '3');
+          timerState.pomodoroCount = parseInt(localStorage.getItem('pomodoroCount') || '0');
+          timerState.totalStudyMinutes = parseInt(localStorage.getItem('totalStudyMinutes') || '0');
+
+          showImportResult('✅ 数据导入成功！请切换到各页面查看。', 'success');
+          // Refresh all views
+          renderSchedule();
+          renderTodos();
+          updateStats();
+          renderCategoryFilters();
+          renderWrongFiles();
+          updateReviewUI();
+          updateExportSummary();
+        } catch (err) {
+          showImportResult('文件解析失败：' + err.message, 'error');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function showImportResult(msg, type) {
+      let resultEl = document.getElementById('importResult');
+      if (!resultEl) {
+        resultEl = document.createElement('div');
+        resultEl.id = 'importResult';
+        resultEl.className = 'import-result';
+        document.getElementById('importDataZone').after(resultEl);
+      }
+      resultEl.textContent = msg;
+      resultEl.className = 'import-result ' + type;
+      setTimeout(() => { resultEl.style.display = 'none'; }, 6000);
+    }
+
+    function clearAllData() {
+      if (!confirm('⚠ 确定要清除所有数据吗？这将删除所有日程、待办事项、错题本、分类和设置。此操作不可撤销！\n\n建议先导出数据备份。')) return;
+      if (!confirm('再次确认：真的要清除所有数据吗？')) return;
+      const keys = [
+        'scheduleRowsData', 'todos', 'wrongFiles', 'customCategories',
+        'reviewReminderEnabled', 'reviewIntervalDays',
+        'pomodoroCount', 'totalStudyMinutes', 'pomodoroDate'
+      ];
+      keys.forEach(k => localStorage.removeItem(k));
+
+      scheduleRowsData = {};
+      todos = [];
+      wrongFiles = [];
+      customCategories = [];
+      reviewReminderEnabled = false;
+      reviewIntervalDays = 3;
+      isReviewMode = false;
+      timerState.pomodoroCount = 0;
+      timerState.totalStudyMinutes = 0;
+
+      renderSchedule();
+      renderTodos();
+      updateStats();
+      renderCategoryFilters();
+      renderWrongFiles();
+      updateReviewUI();
+      updateExportSummary();
+      showImportResult('✅ 所有数据已清除。', 'success');
+    }
+
+    // ==================== INITIALIZATION ====================
+    renderSchedule();
+    renderTodos();
+    updateStats();
+    updateTimerDisplay();
+    updateProgress();
+    updateModeUI();
+    renderCountdown();
+    loadCountdownInputs();
+    updateClock();
+    setInterval(updateClock, 1000);
+    renderCategoryFilters();
+    renderWrongFiles();
+    updateReviewUI();
+    updateExportSummary();
+
+    // Initialize settings inputs
+    document.getElementById('studyDuration').value = timerState.studyDuration;
+    document.getElementById('shortBreakDuration').value = timerState.shortBreakDuration;
+    document.getElementById('longBreakDuration').value = timerState.longBreakDuration;
+
+    // Keyboard shortcut: space to toggle timer
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        e.preventDefault();
+        const pomodoroPage = document.getElementById('page-pomodoro');
+        if (pomodoroPage.classList.contains('active')) {
+          toggleTimer();
+        }
+      }
+    });
+
+    console.log('📚 学习规划助手已就绪！');
+    console.log('  📅 日程表 - 点击方格添加学习安排');
+    console.log('  ✅ 待办事项 - 管理每日任务');
+    console.log('  🍅 番茄钟 - 自定义学习/休息时长');
+    console.log('  ❌ 错题本 - 自定义分类，导入文件并填写解题思路与答案');
+  </script>
+</body>
+</html>
